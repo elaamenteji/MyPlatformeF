@@ -16,7 +16,7 @@ app.use('/api/auth',  require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 
 // Vérifier que le serveur et la base de données fonctionnent
-app.get('/api/health', async (req, res) => {
+app.get('/api/myplateforme', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ success: true, message: '✅ Serveur OK — PostgreSQL connecté!' });
