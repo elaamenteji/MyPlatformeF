@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 
 const App = () => {
   return (
@@ -9,11 +10,14 @@ const App = () => {
       <AuthProvider>
         <Routes>
 
+          {/* Redirect / lel login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
           {/* Page login */}
           <Route path="/login" element={<Login />} />
 
-          {/* Redirect / lel login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Mot de passe oublié */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Admin */}
           <Route path="/admin" element={
