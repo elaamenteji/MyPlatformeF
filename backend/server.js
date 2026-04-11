@@ -14,6 +14,8 @@ app.use(express.json());
 // Routes
 app.use('/api/auth',  require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/commandes', require('./routes/commandes'));
+app.use('/api/stats',     require('./routes/stats'));
 
 // Vérifier que le serveur et la base de données fonctionnent
 app.get('/api/myplateforme', async (req, res) => {
