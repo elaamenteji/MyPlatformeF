@@ -41,10 +41,10 @@ export const AuthProvider = ({ children }) => {
 
   // 7. login() — ki user yclicki "Se connecter"
   // Ykallem el backend → yrod token → y7otou fil localStorage
-  const login = async (email, mot_de_passe) => {
+  const login = async (email, password) => {
 
     // Yb3ath email + password lel backend
-    const { data } = await axios.post('/api/auth/login', { email, mot_de_passe });
+    const { data } = await axios.post('/api/auth/login', { email, mot_de_passe: password });
 
     // Y7ot token fil localStorage (yib9a 7atta ki yrefreshi)
     localStorage.setItem('accessToken',  data.accessToken);

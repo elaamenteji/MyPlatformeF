@@ -31,88 +31,66 @@ const Login = () => {
   };
  
   return (
-    <div className="flex min-h-screen w-full bg-white font-sans">
+    <div style={{ display: 'flex', height: '100vh', width: '100%', fontFamily: "'Inter', sans-serif", overflow: 'hidden' }}>
  
-      {/* GAUCHE : Formulaire — plus large */}
-      <div className="flex w-full flex-col justify-center items-center px-12 md:w-[55%] lg:px-24">
-        <div className="w-full max-w-md">
+      {/* ── GAUCHE 38% ── */}
+      <div style={{ width: '38%', height: '100vh', display: 'flex', flexDirection: 'column', padding: '48px 56px', background: 'white' }}>
  
-          {/* Logo */}
-          <div className="mb-10">
-            <img
-              src="/logo_mitech.png"
-              alt="Mitech Tunisie"
-              className="h-14 w-auto object-contain"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          </div>
+        {/* Logo top */}
+        <div style={{ marginBottom: 'auto' }}>
+          <img src="/logo_mitech.png" alt="Mitech" style={{ height: 44, objectFit: 'contain' }} onError={e => e.target.style.display='none'}/>
+        </div>
  
-          {/* Title */}
-          <h1 className="text-4xl font-light text-slate-800 mb-1">Bienvenue</h1>
-          <p className="text-slate-400 text-sm mb-1">Connectez-vous à votre espace personnel</p>
+        {/* Form centré */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.15em', marginBottom: 10 }}>MITECH TUNISIE</p>
+          <h1 style={{ fontSize: 42, fontWeight: 300, color: '#0f172a', margin: '0 0 8px', lineHeight: 1.1 }}>Bienvenue</h1>
+          <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 40 }}>Connexion à votre espace personnel.</p>
  
-          {/* Error */}
           {error && (
-            <div className="mt-3 mb-1 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#dc2626', marginBottom: 20 }}>
               {error}
             </div>
           )}
  
-          <form className="mt-8 space-y-5" onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
  
             {/* Email */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700" htmlFor="email">
-                Adresse email
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                  <Mail size={17} />
-                </div>
+            <div>
+              <label style={{ fontSize: 13, color: '#475569', display: 'block', marginBottom: 8 }}>Adresse e-mail</label>
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #cbd5e1', paddingBottom: 8, gap: 10 }}>
+                <Mail size={16} color="#94a3b8" style={{ flexShrink: 0 }}/>
                 <input
-                  id="email"
                   type="email"
                   placeholder="votre@mitech.tn"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-700 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#0f172a', background: 'transparent' }}
                 />
               </div>
             </div>
  
             {/* Password */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700" htmlFor="password">
-                  Mot de passe
-                </label>
-                <span
-                  onClick={() => navigate('/forgot-password')}
-                  className="text-xs text-slate-400 hover:text-blue-500 cursor-pointer transition-colors"
-                >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label style={{ fontSize: 13, color: '#475569' }}>Mot de passe</label>
+                <span onClick={() => navigate('/forgot-password')} style={{ fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>
                   Mot de passe oublié ?
                 </span>
               </div>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                  <Lock size={17} />
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #cbd5e1', paddingBottom: 8, gap: 10 }}>
+                <Lock size={16} color="#94a3b8" style={{ flexShrink: 0 }}/>
                 <input
-                  id="password"
                   type={showPass ? 'text' : 'password'}
                   placeholder="••••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-11 text-slate-700 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#0f172a', background: 'transparent' }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  {showPass ? <EyeOff size={17} /> : <Eye size={17} />}
+                <button type="button" onClick={() => setShowPass(!showPass)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, display: 'flex' }}>
+                  {showPass ? <EyeOff size={16}/> : <Eye size={16}/>}
                 </button>
               </div>
             </div>
@@ -121,33 +99,48 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#1a1f2c] py-3.5 text-sm font-semibold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: '#1a1f2c', color: 'white', border: 'none', padding: '14px 0', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, letterSpacing: '0.05em', marginTop: 8 }}
             >
-              {loading ? 'Connexion en cours...' : 'Se connecter →'}
+              {loading ? 'Connexion...' : 'Se connecter'}
             </button>
  
           </form>
- 
-          {/* Footer */}
-          <p className="mt-8 text-center text-xs text-slate-400">
-            🔒 Connexion sécurisée SSL · © 2026 Mitech Tunisie
-          </p>
- 
         </div>
+ 
+        {/* Footer bottom */}
+        <div style={{ marginTop: 'auto' }}>
+       <p style={{ fontSize: 11, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-keyhole-icon lucide-lock-keyhole"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg> Connexion sécurisée · © 2026 Mitech Tunisie</p>
+        </div>
+ 
       </div>
  
-      {/* DROITE : Image — moins large */}
-      <div className="relative hidden md:block md:w-[45%]">
+      {/* ── DROITE 62% ── */}
+      <div style={{ width: '62%', height: '100vh', position: 'relative', overflow: 'hidden' }}>
         <img
-          src="/car_interior.jpg"
+          src="/car_interior1.jpg"
           alt="Mitech"
-          className="h-full w-full object-cover"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
         />
-        <div className="absolute inset-0 bg-black/30 flex flex-col justify-end px-12 pb-14">
-          <h2 className="text-4xl font-medium text-white leading-tight">
-            Excellence<br/>& Précision
+ 
+        {/* Overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+ 
+        {/* Logo blanc top right */}
+        <div style={{ position: 'absolute', top: 32, right: 32 }}>
+          <img
+            src="/logo_mitech.png"
+            alt="Mitech"
+            style={{ height: 36, objectFit: 'contain', filter: 'brightness(0) invert(1)', opacity: 0.85 }}
+            onError={e => e.target.style.display='none'}
+          />
+        </div>
+ 
+        {/* Text bottom */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 56px 52px' }}>
+          <h2 style={{ fontSize: 40, fontWeight: 500, color: 'white', margin: '0 0 12px', lineHeight: 1.2 }}>
+            Excellence & Précision
           </h2>
-          <p className="mt-4 max-w-sm text-base text-slate-200 font-light leading-relaxed">
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', fontWeight: 300, maxWidth: 420, margin: 0 }}>
             Plateforme de gestion intégrée pour les équipes Mitech Tunisie.
           </p>
         </div>
