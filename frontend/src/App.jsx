@@ -1,45 +1,61 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
-import AdminDashboard from './pages/AdminDashboard';
-import ClientDashboard from './pages/ClientDashboard';
-import FournisseurDashboard from './pages/FournisseurDashboard';
-import PartenaireDashboard from './pages/PartenaireDashboard';
+
+// Lazy load pages
+const AdminDashboard      = lazy(() => import('./pages/AdminDashboard'));
+const ClientDashboard     = lazy(() => import('./pages/ClientDashboard'));
+const FournisseurDashboard = lazy(() => import('./pages/FournisseurDashboard'));
+const PartenaireDashboard  = lazy(() => import('./pages/PartenaireDashboard'));
+const Landing              = lazy(() => import('./components/Landing12'));
+
 const App = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Suspense fallback={<div></div>}>
+          <Routes>
 
-          <Route path="/admin" element={
-            <ProtectedRoute roles={['admin']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } />
+            {/* Landing Page — public */}
+            <Route path="/" element={<Landing />} />
 
-          <Route path="/client" element={
-            <ProtectedRoute roles={['client']}>
-              <ClientDashboard />
-            </ProtectedRoute>
-          } />
+            {/* Login / Forgot */}
+            <Route path="/login"           element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          <Route path="/fournisseur" element={
-            <ProtectedRoute roles={['fournisseur']}>
-              <FournisseurDashboard />
-            </ProtectedRoute>
-          } />
+            {/* Admin */}
+            <Route path="/admin" element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
 
-          <Route path="/partenaire" element={
-            <ProtectedRoute roles={['partenaire']}>
-              <PartenaireDashboard />
-            </ProtectedRoute>
-          } />
-        </Routes>
+            {/* Client */}
+            <Route path="/client" element={
+              <ProtectedRoute roles={['client']}>
+                <ClientDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Fournisseur */}
+            <Route path="/fournisseur" element={
+              <ProtectedRoute roles={['fournisseur']}>
+                <FournisseurDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Partenaire */}
+            <Route path="/partenaire" element={
+              <ProtectedRoute roles={['partenaire']}>
+                <PartenaireDashboard />
+              </ProtectedRoute>
+            } />
+
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );

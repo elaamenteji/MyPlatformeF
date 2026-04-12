@@ -6,7 +6,7 @@ const pool    = require('./config/db');
 const app = express();
 
 // Autoriser le frontend React à communiquer avec le backend
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 
 // Accepter les données JSON
 app.use(express.json());
@@ -14,6 +14,8 @@ app.use(express.json());
 // Routes
 app.use('/api/auth',  require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/commandes', require('./routes/commandes'));
+app.use('/api/stats',     require('./routes/stats'));
 
 // Vérifier que le serveur et la base de données fonctionnent
 app.get('/api/myplateforme', async (req, res) => {

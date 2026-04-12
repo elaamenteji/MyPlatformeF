@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// ✅ Vérifie le token JWT
 const verifyToken = (req, res, next) => {
   const auth  = req.headers['authorization'];
   const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -17,12 +16,12 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// ✅ Vérifie le rôle
 const checkRole = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role))
+  const flat = roles.flat();
+  if (!flat.includes(req.user.role))
     return res.status(403).json({
       success: false,
-      message: `Accès refusé. Rôle requis : ${roles.join(' ou ')}.`
+      message: `Accès refusé. Rôle requis : ${flat.join(',')}.`
     });
   next();
 };

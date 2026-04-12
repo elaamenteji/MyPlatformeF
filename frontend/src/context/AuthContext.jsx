@@ -42,14 +42,13 @@ export const AuthProvider = ({ children }) => {
   // 7. login() — ki user yclicki "Se connecter"
   // Ykallem el backend → yrod token → y7otou fil localStorage
   const login = async (email, password) => {
-
-    // Yb3ath email + password lel backend
+    // ✅ FIX: backend yesta3mel mot_de_passe mch password
     const { data } = await axios.post('/api/auth/login', { email, mot_de_passe: password });
 
     // Y7ot token fil localStorage (yib9a 7atta ki yrefreshi)
     localStorage.setItem('accessToken',  data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
-    localStorage.setItem('user',         JSON.stringify(data.user));
+    localStorage.setItem('user', JSON.stringify(data.user));
 
     // Y9oul lel Axios: "b3ath el token ma3 kol request ba3d"
     axios.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;

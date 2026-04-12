@@ -27,7 +27,7 @@ exports.login = async (req, res) => {
 
   // Thabet elli el email w pass maba3thin
   if (!email || !mot_de_passe)
-    return res.status(400).json({ success: false, message: 'Email et mot de passe requis.' });
+    return res.status(400).json({ success: false, message: 'Email et password requis.' });
 
   try {
     // Nlaoujou 3la el user fi l'base b'email mte3ou (nrodouh sghir w nna7ou el frawet)
@@ -40,7 +40,7 @@ exports.login = async (req, res) => {
 
     // Ken l'email mouch mawjoud fi l'base
     if (!rows.length)
-      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect.' });
+      return res.status(401).json({ success: false, message: 'Email ou password incorrect.' });
 
     const user = rows[0]; // Nakhdhou el user elli lqinah
 
@@ -53,7 +53,7 @@ exports.login = async (req, res) => {
     // Qarn el password li jé mel front-end m3a li f'base (bcrypt yfok el loghz)
     const ok = await bcrypt.compare(mot_de_passe, user.mot_de_passe);
     if (!ok)
-      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect.' });
+      return res.status(401).json({ success: false, message: 'Email ou password incorrect.' });
 
     // Sna3et el "Tickets" (Payload fih: id, email, role)
     const payload      = { id: user.id, email: user.email, role: user.role };
@@ -134,7 +134,7 @@ exports.refresh = async (req, res) => {
   }
 };
 
-// --- 5. Tbaddil el Mot de Passe ---
+// --- 5. Tbaddil el password ---
 
 exports.changePassword = async (req, res) => {
   const { ancien, nouveau } = req.body;
@@ -148,14 +148,14 @@ exports.changePassword = async (req, res) => {
 
     // Thabet ken el password el qdim s'hih
     const ok = await bcrypt.compare(ancien, rows[0].mot_de_passe);
-    if (!ok) return res.status(400).json({ success: false, message: 'Ancien mot de passe incorrect.' });
+    if (!ok) return res.status(400).json({ success: false, message: 'Ancien password incorrect.' });
 
     // Chaffir el pass jdid (12 = Salt strength)
     const hash = await bcrypt.hash(nouveau, 12);
     await pool.query('UPDATE users SET mot_de_passe=$1 WHERE id=$2', [hash, req.user.id]);
 
     await log(req.user.id, 'password_change', req); // Sajel el tbaddila fi journal
-    res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+    res.json({ success: true, message: 'password modifié avec succès.' });
   } catch {
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
