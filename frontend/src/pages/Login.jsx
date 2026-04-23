@@ -19,14 +19,30 @@ const Login = () => {
     setLoading(true);
     try {
       const user = await login(email, password);
-      if      (user.role === 'admin')       navigate('/admin');
-      else if (user.role === 'client')      navigate('/client');
-      else if (user.role === 'fournisseur') navigate('/fournisseur');
-      else                                  navigate('/partenaire');
+      if (user.role === 'admin' && user.needsRecoverySetup) {
+        navigate('/setup-recovery-key');
+      } else {
+        switch (user.role) {
+          case 'admin':       navigate('/admin');       break;
+          case 'client':      navigate('/client');      break;
+          case 'fournisseur': navigate('/fournisseur'); break;
+          case 'partenaire':  navigate('/partenaire');  break;
+          default:            navigate('/login');
+        }
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Email ou mot de passe incorrect.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Detect automatique selon email
+  const handleForgotPassword = () => {
+    if (email.toLowerCase().includes('admin')) {
+      navigate('/forgot-password');
+    } else {
+      navigate('/forgot-password-user');
     }
   };
 
@@ -36,7 +52,6 @@ const Login = () => {
       {/* ── GAUCHE 38% ── */}
       <div style={{ width: '38%', height: '100vh', display: 'flex', flexDirection: 'column', padding: '48px 56px', background: 'white' }}>
 
-        {/* Logo top + retour */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'auto' }}>
           <img src="/logo_mitech.png" alt="Mitech" style={{ height: 44, objectFit: 'contain' }} onError={e => e.target.style.display='none'}/>
           <span
@@ -47,7 +62,6 @@ const Login = () => {
           </span>
         </div>
 
-        {/* Form centré */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.15em', marginBottom: 10 }}>MITECH TUNISIE</p>
           <h1 style={{ fontSize: 42, fontWeight: 300, color: '#0f172a', margin: '0 0 8px', lineHeight: 1.1 }}>Bienvenue</h1>
@@ -61,7 +75,6 @@ const Login = () => {
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-            {/* Email */}
             <div>
               <label style={{ fontSize: 13, color: '#475569', display: 'block', marginBottom: 8 }}>Adresse e-mail</label>
               <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #cbd5e1', paddingBottom: 8, gap: 10 }}>
@@ -77,11 +90,14 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <label style={{ fontSize: 13, color: '#475569' }}>Mot de passe</label>
-                <span onClick={() => navigate('/forgot-password')} style={{ fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>
+                {/* ✅ Link wa7ed — detect automatique selon email */}
+                <span
+                  onClick={handleForgotPassword}
+                  style={{ fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}
+                >
                   Mot de passe oublié ?
                 </span>
               </div>
@@ -101,7 +117,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Bouton */}
             <button
               type="submit"
               disabled={loading}
@@ -113,7 +128,6 @@ const Login = () => {
           </form>
         </div>
 
-        {/* Footer bottom */}
         <div style={{ marginTop: 'auto' }}>
           <p style={{ fontSize: 11, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -132,11 +146,7 @@ const Login = () => {
           alt="Mitech"
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
         />
-
-        {/* Overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
-
-        {/* Text bottom */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 56px 52px' }}>
           <h2 style={{ fontSize: 40, fontWeight: 500, color: 'white', margin: '0 0 12px', lineHeight: 1.2 }}>
             Excellence &amp; Précision

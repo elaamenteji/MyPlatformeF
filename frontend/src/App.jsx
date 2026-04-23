@@ -1,16 +1,18 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
 
-// Lazy load pages
-const AdminDashboard      = lazy(() => import('./pages/AdminDashboard'));
-const ClientDashboard     = lazy(() => import('./pages/ClientDashboard'));
+const AdminDashboard       = lazy(() => import('./pages/AdminDashboard'));
+const ClientDashboard      = lazy(() => import('./pages/ClientDashboard'));
 const FournisseurDashboard = lazy(() => import('./pages/FournisseurDashboard'));
 const PartenaireDashboard  = lazy(() => import('./pages/PartenaireDashboard'));
 const Landing              = lazy(() => import('./components/Landing12'));
+const SetupRecoveryKey     = lazy(() => import('./pages/SetupRecoveryKey'));
+const ResetPassword        = lazy(() => import('./pages/ResetPassword'));
+const ForgotPassword       = lazy(() => import('./pages/ForgotPassword'));
+const ForgotPasswordUser   = lazy(() => import('./pages/ForgotPasswordUser'));
 
 const App = () => {
   return (
@@ -19,35 +21,37 @@ const App = () => {
         <Suspense fallback={<div></div>}>
           <Routes>
 
-            {/* Landing Page — public */}
             <Route path="/" element={<Landing />} />
 
-            {/* Login / Forgot */}
-            <Route path="/login"           element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/login"                element={<Login />} />
+            <Route path="/forgot-password"      element={<ForgotPassword />} />
+            <Route path="/forgot-password-user" element={<ForgotPasswordUser />} />
+            <Route path="/reset-password"       element={<ResetPassword />} />
 
-            {/* Admin */}
+            <Route path="/setup-recovery-key" element={
+              <ProtectedRoute roles={['admin']}>
+                <SetupRecoveryKey />
+              </ProtectedRoute>
+            } />
+
             <Route path="/admin" element={
               <ProtectedRoute roles={['admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
 
-            {/* Client */}
             <Route path="/client" element={
               <ProtectedRoute roles={['client']}>
                 <ClientDashboard />
               </ProtectedRoute>
             } />
 
-            {/* Fournisseur */}
             <Route path="/fournisseur" element={
               <ProtectedRoute roles={['fournisseur']}>
                 <FournisseurDashboard />
               </ProtectedRoute>
             } />
 
-            {/* Partenaire */}
             <Route path="/partenaire" element={
               <ProtectedRoute roles={['partenaire']}>
                 <PartenaireDashboard />

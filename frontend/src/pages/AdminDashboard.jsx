@@ -1,21 +1,15 @@
-/**
- * ═══════════════════════════════════════════════════════════════
- *           Admin Dashboard - Lbouhla eltihkum rkiba
- * ═══════════════════════════════════════════════════════════════
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ProfileSection from '../components/ProfileSection';
+import NotificationBell from '../components/NotificationBell';
 import {
   LayoutDashboard,
   Users,
   UserCircle,
   ScrollText,
   LogOut,
-  Bell,
   Plus,
 } from 'lucide-react';
 
@@ -450,17 +444,13 @@ const AdminDashboard = () => {
 
       {/* ━━━━━━━━ Sidebar ━━━━━━━━ */}
       <div style={s.sidebar}>
-
-        {/* ✅ LOGO - mصلح */}
         <div style={s.logoBox}>
           <img
             src="/logo_mitech.png"
-           
-            style={{ height: 58, width: 'auto', objectFit: 'contain' }} />
-  
+            style={{ height: 58, width: 'auto', objectFit: 'contain' }}
+          />
         </div>
 
-        {/* Navigation */}
         <nav style={{ flex: 1, padding: '14px 10px' }}>
           {navItems.map(item => (
             <div
@@ -481,7 +471,6 @@ const AdminDashboard = () => {
           ))}
         </nav>
 
-        {/* User info + logout */}
         <div style={{ padding: '14px 14px', borderTop: `0.5px solid ${T.borderXs}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
             <div style={{
@@ -522,14 +511,9 @@ const AdminDashboard = () => {
           <div style={{ fontSize: 16, fontWeight: 700, color: T.txt }}>
             {pageTitle[activePage]}
           </div>
+          {/* ✅ Bell remplacée par NotificationBell */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 9,
-              background: '#f8fafc', border: `0.5px solid ${T.border}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            }}>
-              <Bell size={15} color={T.txtMid} />
-            </div>
+            <NotificationBell />
             {activePage === 'users' && (
               <button
                 onClick={() => setShowModal(true)}
@@ -547,7 +531,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Message */}
         {message.text && (
           <div style={{
             margin: '12px 26px 0',
@@ -561,7 +544,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Page content */}
         <div style={s.content}>
 
           {/* ◆ DASHBOARD */}

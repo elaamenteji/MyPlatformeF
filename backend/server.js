@@ -3,7 +3,10 @@ const express = require('express');
 const cors    = require('cors');
 const pool    = require('./config/db');
 
+const notificationsRouter = require('./routes/notifications');
+
 const app = express();
+
 
 // Autoriser le frontend React à communiquer avec le backend
 app.use(cors({ origin: true, credentials: true }));
@@ -16,6 +19,7 @@ app.use('/api/auth',  require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/commandes', require('./routes/commandes'));
 app.use('/api/stats',     require('./routes/stats'));
+app.use('/api/notifications', notificationsRouter);
 
 // Vérifier que le serveur et la base de données fonctionnent
 app.get('/api/myplateforme', async (req, res) => {

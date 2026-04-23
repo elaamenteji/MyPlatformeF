@@ -29,8 +29,6 @@ const ClientDashboard = () => {
     await logout();
     navigate('/login');
   };
-
-  return (
     // 6. El container — minHeight: 100vh → full screen dima
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif' }}>
 
