@@ -170,18 +170,6 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
             ))}
           </div>
 
-          {/* Email — readonly */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
-              Email (non modifiable)
-            </label>
-            <input
-              value={user?.email || ''}
-              readOnly
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#94a3b8', background: '#f8fafc', fontFamily: 'sans-serif', boxSizing: 'border-box' }}
-            />
-          </div>
-
           {/* Téléphone */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
