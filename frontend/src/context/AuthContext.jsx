@@ -3,20 +3,23 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
+
 axios.defaults.baseURL = 'http://localhost:5000';
 
 export const AuthProvider = ({ children }) => {
 
   const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token,   setToken]   = useState(localStorage.getItem('accessToken'));
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
-    const token     = localStorage.getItem('accessToken');
+    const savedToken = localStorage.getItem('accessToken');
 
-    if (savedUser && token) {
+    if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setToken(savedToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
     }
     setLoading(false);
   }, []);
@@ -31,6 +34,7 @@ export const AuthProvider = ({ children }) => {
     axios.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
 
     setUser(data.user);
+    setToken(data.accessToken);
 
     return data.user; // Login.jsx yaamel el redirect
   };
@@ -41,12 +45,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.clear();
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
+    setToken(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+ return (
+  <AuthContext.Provider value={{ user, loading, login, logout, token }}>
+    {children}
+  </AuthContext.Provider>
   );
 };
 
