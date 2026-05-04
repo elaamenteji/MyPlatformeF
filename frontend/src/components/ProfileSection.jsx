@@ -1,32 +1,23 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ProfileSection.jsx — Section Profil
 // Component réutilisable lil kol dashboards
+// showPasswordTab={true}  → Admin seulement
+// showPasswordTab={false} → Client, Fournisseur, Partenaire
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// useState → ardoise (tkhazzen el valeurs)
-// useEffect → ycharrej el data ki el page tiftah
 import { useState, useEffect } from 'react';
-
-// useAuth → njibou user (nom, prenom, email...)
 import { useAuth } from '../context/AuthContext';
-
-// axios → ykallem el backend
 import axios from 'axios';
 
-const ProfileSection = ({ accentColor = '#2563eb' }) => {
-  // accentColor → couleur mte3 kol rôle
-  // admin = bleu, client = vert, fournisseur = safra...
-
+const ProfileSection = ({ accentColor = '#2563eb', showPasswordTab = false }) => {
   const { user } = useAuth();
 
-  // States mte3 el profil
   const [profil,   setProfil]   = useState({ nom: '', prenom: '', telephone: '' });
   const [password, setPassword] = useState({ ancien: '', nouveau: '', confirm: '' });
-  const [tab,      setTab]      = useState('profil'); // 'profil' ou 'password'
+  const [tab,      setTab]      = useState('profil');
   const [loading,  setLoading]  = useState(false);
   const [message,  setMessage]  = useState({ text: '', type: '' });
 
-  // Ki el component yftah → ycharrej infos profil men backend
   useEffect(() => {
     const fetchProfil = async () => {
       try {
@@ -43,13 +34,11 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
     fetchProfil();
   }, []);
 
-  // Afficher message w yamshih ba3d 3 secondes
   const showMessage = (text, type) => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: '', type: '' }), 3000);
   };
 
-  // ── Modifier Profil ──
   const handleUpdateProfil = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -63,18 +52,12 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
     }
   };
 
-  // ── Changer Password ──
   const handleChangePassword = async (e) => {
     e.preventDefault();
-
-    // Ychek eli nouveau = confirm
     if (password.nouveau !== password.confirm)
       return showMessage('Les mots de passe ne correspondent pas.', 'error');
-
-    // Ychek longueur
     if (password.nouveau.length < 8)
       return showMessage('Minimum 8 caractères.', 'error');
-
     setLoading(true);
     try {
       await axios.put('/api/auth/password', {
@@ -90,19 +73,24 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
     }
   };
 
-  // Initiales avatar
   const initiales = ((user?.prenom?.[0] || '') + (user?.nom?.[0] || '')).toUpperCase();
+
+  // Tabs — password tab visible seulement si showPasswordTab=true (admin)
+  const tabs = [
+    { id: 'profil', label: 'Informations personnelles' },
+    ...(showPasswordTab ? [{ id: 'password', label: 'Mot de passe' }] : []),
+  ];
 
   return (
     <div style={{ maxWidth: 600 }}>
 
-      {/* ── Avatar + Nom ── */}
+      {/* Avatar + Nom */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
           background: accentColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22, fontWeight: 800, color: '#fff', flexShrink: 0
+          fontSize: 22, fontWeight: 800, color: '#fff', flexShrink: 0,
         }}>
           {initiales}
         </div>
@@ -111,29 +99,40 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
             {user?.prenom} {user?.nom}
           </div>
           <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 2 }}>{user?.email}</div>
+          <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2, textTransform: 'capitalize' }}>
+            {user?.role_nom || user?.role || ''}
+          </div>
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, background: '#f1f5f9', borderRadius: 10, padding: 4 }}>
-        {[
-          { id: 'profil',   label: 'Informations personnelles' },
-          { id: 'password', label: 'Mot de passe' },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '9px 16px', borderRadius: 8,
-            border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            background: tab === t.id ? '#fff' : 'transparent',
-            color: tab === t.id ? accentColor : '#64748b',
-            transition: 'all 0.15s', fontFamily: 'sans-serif',
-            boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — une seule tab si moch admin */}
+      {tabs.length > 1 && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, background: '#f1f5f9', borderRadius: 10, padding: 4 }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              flex: 1, padding: '9px 16px', borderRadius: 8,
+              border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              background: tab === t.id ? '#fff' : 'transparent',
+              color: tab === t.id ? accentColor : '#64748b',
+              transition: 'all 0.15s', fontFamily: 'sans-serif',
+              boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+            }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* ── Message ── */}
+      {/* Si moch admin — titre simple */}
+      {tabs.length === 1 && (
+        <div style={{ marginBottom: 20, padding: '8px 0', borderBottom: `2px solid ${accentColor}22` }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: accentColor }}>
+            Informations personnelles
+          </span>
+        </div>
+      )}
+
+      {/* Message */}
       {message.text && (
         <div style={{
           padding: '11px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500,
@@ -146,15 +145,13 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
         </div>
       )}
 
-      {/* ── Tab Profil ── */}
-      {tab === 'profil' && (
+      {/* Tab Profil */}
+      {(tab === 'profil') && (
         <form onSubmit={handleUpdateProfil} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Prénom + Nom */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {[
               { label: 'Prénom', key: 'prenom', placeholder: 'Votre prénom' },
-              { label: 'Nom',    key: 'nom',    placeholder: 'Votre nom' },
+              { label: 'Nom',    key: 'nom',    placeholder: 'Votre nom'    },
             ].map(f => (
               <div key={f.key}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
@@ -170,7 +167,6 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
             ))}
           </div>
 
-          {/* Téléphone */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
               Téléphone
@@ -183,27 +179,31 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
             />
           </div>
 
-          {/* Bouton */}
+          {/* Info — password géré par admin */}
+          {!showPasswordTab && (
+            <div style={{ background: '#f8fafc', border: '0.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#64748b' }}>
+              🔒 Pour modifier votre mot de passe, veuillez contacter l'administrateur.
+            </div>
+          )}
+
           <button type="submit" disabled={loading} style={{
             padding: '12px', background: accentColor, color: '#fff',
             border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
-            fontFamily: 'sans-serif', marginTop: 4
+            fontFamily: 'sans-serif', marginTop: 4,
           }}>
             {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
-
         </form>
       )}
 
-      {/* ── Tab Password ── */}
-      {tab === 'password' && (
+      {/* Tab Password — Admin seulement */}
+      {tab === 'password' && showPasswordTab && (
         <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
           {[
-            { label: 'Mot de passe actuel',     key: 'ancien',   placeholder: '••••••••' },
-            { label: 'Nouveau mot de passe',    key: 'nouveau',  placeholder: '••••••••' },
-            { label: 'Confirmer mot de passe',  key: 'confirm',  placeholder: '••••••••' },
+            { label: 'Mot de passe actuel',    key: 'ancien',  placeholder: '••••••••' },
+            { label: 'Nouveau mot de passe',   key: 'nouveau', placeholder: '••••••••' },
+            { label: 'Confirmer mot de passe', key: 'confirm', placeholder: '••••••••' },
           ].map(f => (
             <div key={f.key}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
@@ -220,21 +220,18 @@ const ProfileSection = ({ accentColor = '#2563eb' }) => {
             </div>
           ))}
 
-          {/* Info */}
           <div style={{ background: '#f8fafc', border: '0.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#64748b' }}>
             ℹ️ Minimum 8 caractères
           </div>
 
-          {/* Bouton */}
           <button type="submit" disabled={loading} style={{
             padding: '12px', background: accentColor, color: '#fff',
             border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
-            fontFamily: 'sans-serif'
+            fontFamily: 'sans-serif',
           }}>
             {loading ? 'Modification...' : 'Modifier le mot de passe'}
           </button>
-
         </form>
       )}
 
