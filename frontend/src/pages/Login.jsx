@@ -37,9 +37,8 @@ const Login = () => {
     }
   };
 
-  // ✅ Detect automatique selon email
   const handleForgotPassword = () => {
-    if (email.toLowerCase().includes('admin')) {
+    if (email.toLowerCase() === 'aelament2003@gmail.com') {
       navigate('/forgot-password');
     } else {
       navigate('/forgot-password-user');
@@ -93,7 +92,6 @@ const Login = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <label style={{ fontSize: 13, color: '#475569' }}>Mot de passe</label>
-                {/* ✅ Link wa7ed — detect automatique selon email */}
                 <span
                   onClick={handleForgotPassword}
                   style={{ fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 // ── Palette partagée ──────────────────────────────────────────
 const T = {
@@ -315,13 +316,17 @@ const ProjetsSection = () => {
   const [projets,  setProjets]  = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [erreur,   setErreur]   = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
-    axios.get('/api/projets')
+    if (!token) return;
+    axios.get('/api/projets', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(({ data }) => setProjets(Array.isArray(data.data) ? data.data : []))
       .catch(() => setErreur(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   const total    = projets.length;
   const enCours  = projets.filter(p => p.last_update_status === 'on_track').length;
@@ -418,13 +423,17 @@ const CommandesSection = () => {
   const [commandes,  setCommandes]  = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [available,  setAvailable]  = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
-    axios.get('/api/admin/commandes')
+    if (!token) return;
+    axios.get('/api/admin/commandes', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(({ data }) => { setCommandes(Array.isArray(data.data) ? data.data : []); setAvailable(true); })
       .catch(() => setAvailable(false))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   const CMD_STATE = {
     draft:    { label: 'Brouillon', color: T.txtMute, bg: T.bg      },
@@ -500,13 +509,17 @@ const FacturesSection = () => {
   const [factures,  setFactures]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [available, setAvailable] = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
-    axios.get('/api/admin/factures')
+    if (!token) return;
+    axios.get('/api/admin/factures', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(({ data }) => { setFactures(Array.isArray(data.data) ? data.data : []); setAvailable(true); })
       .catch(() => setAvailable(false))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   const PAY_STATE = {
     not_paid:   { label: 'Non payé', color: T.red,    bg: T.redBg    },
