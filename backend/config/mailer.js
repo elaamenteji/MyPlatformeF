@@ -3,11 +3,22 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,  // gmail mte3ek
-    pass: process.env.SMTP_PASS,  // app password 16 chars
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 
+// ── Generic sendMail ───────────────────────────────────────────
+const sendMail = async ({ to, subject, html }) => {
+  await transporter.sendMail({
+    from: `MyPlatforme <${process.env.SMTP_USER}>`,
+    to,
+    subject,
+    html,
+  });
+};
+
+// ── Reset link (admin forgot password) ────────────────────────
 const sendResetLinkEmail = async (toEmail, resetLink, prenom) => {
   await transporter.sendMail({
     from: `MyPlatforme <${process.env.SMTP_USER}>`,
@@ -30,6 +41,7 @@ const sendResetLinkEmail = async (toEmail, resetLink, prenom) => {
   });
 };
 
+// ── Welcome email (nouvel utilisateur) ────────────────────────
 const sendWelcomeEmail = async (toEmail, prenom, mdps) => {
   await transporter.sendMail({
     from: `MyPlatforme <${process.env.SMTP_USER}>`,
@@ -55,4 +67,4 @@ const sendWelcomeEmail = async (toEmail, prenom, mdps) => {
   });
 };
 
-module.exports = { sendResetLinkEmail, sendWelcomeEmail };
+module.exports = { sendMail, sendResetLinkEmail, sendWelcomeEmail };

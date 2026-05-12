@@ -22,7 +22,7 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/projets', require('./routes/projets'));
 app.use('/api/fournisseur', require('./routes/fournisseur'));
- 
+app.use('/api/partenaire', require('./routes/partenaire'));
 
 // Vérifier que le serveur et la base de données fonctionnent
 app.get('/api/myplateforme', async (req, res) => {

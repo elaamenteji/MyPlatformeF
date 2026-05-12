@@ -7,12 +7,11 @@ import NotificationBell from '../components/NotificationBell';
 import {
   LayoutDashboard, Users, UserCircle, ScrollText,
   LogOut, Plus, FolderKanban, ShoppingCart, FileText,
-  Mail, CheckCircle2,
+  Mail, CheckCircle2, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
 
 const API = 'http://localhost:5000';
 
-// ── Design Tokens Admin ────────────────────────────────────────
 const T = {
   blue:     '#3b5bdb', indigo:   '#7048e8', sky:      '#4dabf7', navy:     '#1c3fa8',
   bg:       '#f1f5f9', surface:  '#ffffff', border:   '#e2e8f0', borderXs: '#f1f5f9',
@@ -68,6 +67,12 @@ const PAY_STATE = {
 const initiales = (nom, prenom) => ((prenom?.[0] || '') + (nom?.[0] || '')).toUpperCase();
 const fmtDate   = (d) => d ? new Date(d).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmt       = (n) => parseFloat(n || 0).toLocaleString('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ── Password generator ─────────────────────────────────────────
+const genPassword = () => {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!$%';
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+};
 
 const StatutPill = ({ statut }) => {
   const map = { actif: { bg: T.greenBg, color: T.green }, inactif: { bg: T.amberBg, color: T.amber }, bloque: { bg: T.redBg, color: T.red }, bloqué: { bg: T.redBg, color: T.red } };
@@ -268,17 +273,20 @@ const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [users,      setUsers]      = useState([]);
-  const [stats,      setStats]      = useState(null);
-  const [activePage, setActivePage] = useState('dashboard');
-  const [showModal,  setShowModal]  = useState(false);
-  const [loading,    setLoading]    = useState(false);
-  const [message,    setMessage]    = useState({ text: '', type: '' });
-  const [mailStatus, setMailStatus] = useState(null); // 'sent' | 'failed' | null
+  const [users,        setUsers]        = useState([]);
+  const [stats,        setStats]        = useState(null);
+  const [activePage,   setActivePage]   = useState('dashboard');
+  const [showModal,    setShowModal]    = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [message,      setMessage]      = useState({ text: '', type: '' });
 
-  const [form, setForm] = useState({
-    nom: '', prenom: '', email: '', mot_de_passe: '', role_id: 2,
-  });
+  // ── Password states ──────────────────────────────────────────
+  const [pwMode,       setPwMode]       = useState('auto');
+  const [manualPw,     setManualPw]     = useState('');
+  const [showManualPw, setShowManualPw] = useState(false);
+  const [generatedPw,  setGeneratedPw]  = useState(() => genPassword());
+
+  const [form, setForm] = useState({ nom: '', prenom: '', email: '', role_id: 2 });
 
   const donutRef   = useRef(null);
   const barRef     = useRef(null);
@@ -332,31 +340,34 @@ const AdminDashboard = () => {
     setTimeout(() => setMessage({ text: '', type: '' }), 4000);
   };
 
-  // ── CREATE USER + MAIL WELCOME ──────────────────────────────
+  const resetModal = () => {
+    setShowModal(false);
+    setForm({ nom: '', prenom: '', email: '', role_id: 2 });
+    setPwMode('auto');
+    setManualPw('');
+    setShowManualPw(false);
+    setGeneratedPw(genPassword());
+  };
+
+  // ── CREATE USER ──────────────────────────────────────────────
   const handleCreate = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMailStatus(null);
     try {
-      // Route jdida — tkhaleq user w tebaat mail welcome automatique
-      const res = await axios.post(`${API}/api/auth/create-user-mail`, form);
-
+      const payload = {
+        ...form,
+        mot_de_passe: pwMode === 'manual' ? manualPw : generatedPw,
+      };
+      const res = await axios.post(`${API}/api/auth/create-user-mail`, payload);
       if (res.data.success) {
-        setMailStatus('sent');
         showMsg(`✅ Compte créé ! Email envoyé à ${form.email}`, 'success');
-        setShowModal(false);
-        setForm({ nom: '', prenom: '', email: '', mot_de_passe: '', role_id: 2 });
+        resetModal();
         fetchUsers();
         fetchStats();
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Erreur serveur.';
-      // Ken email déjà utilisé
-      if (msg.includes('déjà')) {
-        showMsg('⚠️ Cet email est déjà utilisé.', 'error');
-      } else {
-        showMsg(msg, 'error');
-      }
+      showMsg(msg.includes('déjà') ? '⚠️ Cet email est déjà utilisé.' : msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -395,6 +406,16 @@ const AdminDashboard = () => {
 
   const inputStyle = { padding: '11px 13px', borderRadius: 10, border: '1px solid #e2e8f0', outline: 'none', fontSize: 13, width: '100%', fontFamily: "'Segoe UI', system-ui, sans-serif", color: '#0f172a', boxSizing: 'border-box' };
 
+  // ── Strength calc ────────────────────────────────────────────
+  const getPwStrength = (v) => {
+    let sc = 0;
+    if (v.length >= 6) sc++;
+    if (v.length >= 8) sc++;
+    if (/[A-Z]/.test(v) && /[0-9]/.test(v)) sc++;
+    if (/[@#!$%]/.test(v)) sc++;
+    return sc;
+  };
+
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: T.bg }}>
 
@@ -426,7 +447,6 @@ const AdminDashboard = () => {
 
       {/* ━━━━ Main ━━━━ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Topbar */}
         <div style={{ background: T.surface, padding: '13px 26px', borderBottom: `0.5px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: T.txt }}>{pageTitle[activePage]}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -439,14 +459,12 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Message */}
         {message.text && (
           <div style={{ margin: '12px 26px 0', padding: '10px 16px', borderRadius: 10, fontSize: 12.5, background: message.type === 'success' ? T.greenBg : T.redBg, color: message.type === 'success' ? T.green : T.red, border: `0.5px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}` }}>
             {message.text}
           </div>
         )}
 
-        {/* Content */}
         <div style={{ flex: 1, overflow: 'auto', padding: '22px 26px' }}>
           {activePage === 'dashboard' && (
             <>
@@ -503,6 +521,7 @@ const AdminDashboard = () => {
               </div>
             </>
           )}
+
           {activePage === 'users' && (
             <div style={{ background: T.surface, borderRadius: 14, overflow: 'hidden', boxShadow: T.shadow }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr 1.4fr', padding: '9px 20px', background: '#f8fafc', borderBottom: `0.5px solid ${T.borderXs}`, fontSize: 10, fontWeight: 700, color: T.txtMute, letterSpacing: '0.4px' }}>
@@ -527,6 +546,7 @@ const AdminDashboard = () => {
                 ))}
             </div>
           )}
+
           {activePage === 'projets'   && <AdminProjetsPage />}
           {activePage === 'commandes' && <AdminCommandesPage />}
           {activePage === 'factures'  && <AdminFacturesPage />}
@@ -545,15 +565,7 @@ const AdminDashboard = () => {
                 <h3 style={{ margin: 0, color: T.txt, fontSize: 16 }}>Nouvel utilisateur</h3>
                 <p style={{ margin: '3px 0 0', fontSize: 12, color: T.txtMute }}>Un email de bienvenue sera envoyé automatiquement</p>
               </div>
-              <button onClick={() => setShowModal(false)} style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: 8, fontSize: 16, cursor: 'pointer', color: T.txtMid, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-            </div>
-
-            {/* Info mail */}
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Mail size={15} color="#2563eb" />
-              <span style={{ fontSize: 12, color: '#1d4ed8', fontWeight: 500 }}>
-                L'utilisateur recevra ses identifiants par email dès la création.
-              </span>
+              <button onClick={resetModal} style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: 8, fontSize: 16, cursor: 'pointer', color: T.txtMid, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
             </div>
 
             <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
@@ -562,8 +574,79 @@ const AdminDashboard = () => {
                   <input key={key} style={inputStyle} placeholder={ph} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} required />
                 ))}
               </div>
-              <input style={inputStyle} type="email" placeholder="Email (n'importe quel domaine)" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-              <input style={inputStyle} type="password" placeholder="Mot de passe temporaire" value={form.mot_de_passe} onChange={e => setForm({ ...form, mot_de_passe: e.target.value })} required />
+
+              <input style={inputStyle} type="email" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+
+              {/* ━━ Password section ━━ */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 600, color: T.txtMid, margin: '0 0 8px' }}>Mot de passe</p>
+
+                {/* Toggle auto / manual */}
+                <div style={{ display: 'flex', border: `0.5px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+                  {[
+                    { key: 'auto',   label: '✦ Générer automatiquement' },
+                    { key: 'manual', label: '✎ Choisir moi-même'        },
+                  ].map(opt => (
+                    <button key={opt.key} type="button" onClick={() => setPwMode(opt.key)}
+                      style={{ flex: 1, padding: '9px 10px', border: 'none', fontSize: 12, fontWeight: pwMode === opt.key ? 600 : 400, cursor: 'pointer', background: pwMode === opt.key ? '#eef2ff' : T.surface, color: pwMode === opt.key ? T.blue : T.txtMid, borderRight: opt.key === 'auto' ? `0.5px solid ${T.border}` : 'none', transition: 'all 0.15s' }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Mode auto */}
+                {pwMode === 'auto' && (
+                  <div>
+                    <div style={{ background: '#f8fafc', border: `0.5px solid ${T.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 600, color: T.txt, letterSpacing: 1 }}>{generatedPw}</span>
+                      <button type="button" onClick={() => setGeneratedPw(genPassword())}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.txtMute, padding: 0, display: 'flex', alignItems: 'center' }}>
+                        <RefreshCw size={14} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircle2 size={13} color="#16a34a" />
+                      <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>Fort — sera envoyé par email à l'utilisateur</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode manual */}
+                {pwMode === 'manual' && (
+                  <div>
+                    <div style={{ position: 'relative', marginBottom: 6 }}>
+                      <input
+                        style={{ ...inputStyle, paddingRight: 38 }}
+                        type={showManualPw ? 'text' : 'password'}
+                        placeholder="Saisir un mot de passe (min. 8 car.)"
+                        value={manualPw}
+                        onChange={e => setManualPw(e.target.value)}
+                        required
+                      />
+                      <button type="button" onClick={() => setShowManualPw(!showManualPw)}
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.txtMute, padding: 0, display: 'flex' }}>
+                        {showManualPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                    {manualPw.length > 0 && (() => {
+                      const sc = getPwStrength(manualPw);
+                      const colors = ['#ef4444', '#f97316', '#eab308', '#16a34a'];
+                      const labels = ['Très faible', 'Faible', 'Moyen', 'Fort ✓'];
+                      return (
+                        <div>
+                          <div style={{ display: 'flex', gap: 4, marginBottom: 3 }}>
+                            {[0,1,2,3].map(i => (
+                              <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i < sc ? colors[sc-1] : '#e2e8f0', transition: 'background 0.2s' }} />
+                            ))}
+                          </div>
+                          <span style={{ fontSize: 11, color: colors[Math.max(0, sc-1)] }}>{labels[Math.max(0, sc-1)]}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+
               <select style={{ ...inputStyle, background: T.surface }} value={form.role_id} onChange={e => setForm({ ...form, role_id: parseInt(e.target.value) })}>
                 <option value="2">Client</option>
                 <option value="3">Fournisseur</option>
@@ -571,11 +654,13 @@ const AdminDashboard = () => {
               </select>
 
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `0.5px solid ${T.border}`, background: '#f8fafc', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: T.txtMid }}>
+                <button type="button" onClick={resetModal}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: `0.5px solid ${T.border}`, background: '#f8fafc', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: T.txtMid }}>
                   Annuler
                 </button>
-                <button type="submit" disabled={loading} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: loading ? '#93c5fd' : `linear-gradient(135deg, ${T.blue}, ${T.indigo})`, color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  {loading ? 'Création...' : <><Mail size={13} /> Créer & Envoyer mail</>}
+                <button type="submit" disabled={loading || (pwMode === 'manual' && manualPw.length < 8)}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: (loading || (pwMode === 'manual' && manualPw.length < 8)) ? '#93c5fd' : `linear-gradient(135deg, ${T.blue}, ${T.indigo})`, color: '#fff', cursor: (loading || (pwMode === 'manual' && manualPw.length < 8)) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  {loading ? 'Création...' : <><Mail size={13} /> Créer &amp; Envoyer mail</>}
                 </button>
               </div>
             </form>

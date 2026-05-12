@@ -18,6 +18,7 @@ const ForgotPasswordUser   = lazy(() => import('./pages/ForgotPasswordUser'));
 // Ces deux fichiers doivent exister dans src/pages/
 const SuiviProjets         = lazy(() => import('./components/SuiviProjets'));
 const PlaningDatesClés     = lazy(() => import('./components/PlanningDates'));
+const ChangePassword = lazy(() => import('./pages/ChangePassword'));
 
 const App = () => {
   return (
@@ -77,6 +78,13 @@ const App = () => {
             <Route path="/partenaire" element={
               <ProtectedRoute roles={['partenaire']}>
                 <PartenaireDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* ── ROUTE CHANGER MOT DE PASSE ── */}
+            <Route path="/change-password" element={
+              <ProtectedRoute>
+                <ChangePassword />
               </ProtectedRoute>
             } />
 
