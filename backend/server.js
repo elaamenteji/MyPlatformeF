@@ -7,7 +7,6 @@ const notificationsRouter = require('./routes/notifications');
 
 const app = express();
 
-
 // Autoriser le frontend React à communiquer avec le backend
 app.use(cors({ origin: true, credentials: true }));
 
@@ -33,6 +32,10 @@ app.get('/api/myplateforme', async (req, res) => {
     res.status(500).json({ success: false, message: '❌ Erreur base de données.' });
   }
 });
+
+// Odoo Sync Routes
+const odooSyncRoutes = require('./routes/odooSync');
+app.use('/api/sync', odooSyncRoutes);
 
 // Démarrer le serveur
 const PORT = process.env.PORT || 5000;

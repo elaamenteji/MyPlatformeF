@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ProfileSection from '../components/ProfileSection';
 import NotificationBell from '../components/NotificationBell';
+import OdooSyncPage from './OdooSyncPage';
 import {
   LayoutDashboard, Users, UserCircle, ScrollText,
   LogOut, Plus, FolderKanban, ShoppingCart, FileText,
@@ -64,15 +65,18 @@ const PAY_STATE = {
   reversed:   { label: 'Extourné', color: P.purple, bg: P.purpleBg, border: P.purpleBd },
 };
 
+const ROLE_ID_MAP = { client: 2, fournisseur: 3, partenaire: 4 };
+
 const initiales = (nom, prenom) => ((prenom?.[0] || '') + (nom?.[0] || '')).toUpperCase();
 const fmtDate   = (d) => d ? new Date(d).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmt       = (n) => parseFloat(n || 0).toLocaleString('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// ── Password generator ─────────────────────────────────────────
 const genPassword = () => {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!$%';
   return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 };
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value);
 
 const StatutPill = ({ statut }) => {
   const map = { actif: { bg: T.greenBg, color: T.green }, inactif: { bg: T.amberBg, color: T.amber }, bloque: { bg: T.redBg, color: T.red }, bloqué: { bg: T.redBg, color: T.red } };
@@ -270,7 +274,7 @@ const AdminFacturesPage = () => {
 // MAIN AdminDashboard
 // ══════════════════════════════════════════════════════════════
 const AdminDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const navigate = useNavigate();
 
   const [users,        setUsers]        = useState([]);
@@ -280,13 +284,22 @@ const AdminDashboard = () => {
   const [loading,      setLoading]      = useState(false);
   const [message,      setMessage]      = useState({ text: '', type: '' });
 
-  // ── Password states ──────────────────────────────────────────
+  // ── Modal mode: 'manual' | 'odoo' ───────────────────────────
+  const [modalMode,    setModalMode]    = useState('manual');
+
+  // ── Manual mode states ───────────────────────────────────────
   const [pwMode,       setPwMode]       = useState('auto');
   const [manualPw,     setManualPw]     = useState('');
   const [showManualPw, setShowManualPw] = useState(false);
   const [generatedPw,  setGeneratedPw]  = useState(() => genPassword());
-
+  const [emailError,   setEmailError]   = useState('');
   const [form, setForm] = useState({ nom: '', prenom: '', email: '', role_id: 2 });
+
+  // ── Odoo mode states ─────────────────────────────────────────
+  const [odooContacts,    setOdooContacts]    = useState([]);
+  const [odooLoading,     setOdooLoading]     = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [odooRoleId,      setOdooRoleId]      = useState(2);
 
   const donutRef   = useRef(null);
   const barRef     = useRef(null);
@@ -298,6 +311,17 @@ const AdminDashboard = () => {
   };
   const fetchUsers = async () => {
     try { const { data } = await axios.get(`${API}/api/users`); setUsers(data.data); } catch {}
+  };
+
+  const fetchOdooContacts = async () => {
+    setOdooLoading(true);
+    try {
+      const { data } = await axios.get(`${API}/api/sync/odoo-contacts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOdooContacts(data.data || []);
+    } catch { setOdooContacts([]); }
+    finally { setOdooLoading(false); }
   };
 
   useEffect(() => { fetchStats(); fetchUsers(); }, []);
@@ -340,37 +364,76 @@ const AdminDashboard = () => {
     setTimeout(() => setMessage({ text: '', type: '' }), 4000);
   };
 
+  const handleEmailChange = (value) => {
+    setForm(prev => ({ ...prev, email: value }));
+    if (!value) { setEmailError(''); return; }
+    setEmailError(!isValidEmail(value) ? 'Adresse email invalide' : '');
+  };
+
   const resetModal = () => {
     setShowModal(false);
+    setModalMode('manual');
     setForm({ nom: '', prenom: '', email: '', role_id: 2 });
     setPwMode('auto');
     setManualPw('');
     setShowManualPw(false);
     setGeneratedPw(genPassword());
+    setEmailError('');
+    setSelectedContact(null);
+    setOdooContacts([]);
+    setOdooRoleId(2);
   };
 
-  // ── CREATE USER ──────────────────────────────────────────────
+  const openModal = () => {
+    setShowModal(true);
+    setModalMode('manual');
+  };
+
+  const switchToOdoo = () => {
+    setModalMode('odoo');
+    fetchOdooContacts();
+  };
+
+  // ── CREATE USER (manual) ─────────────────────────────────────
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!isValidEmail(form.email)) { setEmailError('Adresse email invalide'); return; }
     setLoading(true);
     try {
-      const payload = {
-        ...form,
-        mot_de_passe: pwMode === 'manual' ? manualPw : generatedPw,
-      };
+      const payload = { ...form, mot_de_passe: pwMode === 'manual' ? manualPw : generatedPw };
       const res = await axios.post(`${API}/api/auth/create-user-mail`, payload);
       if (res.data.success) {
         showMsg(`✅ Compte créé ! Email envoyé à ${form.email}`, 'success');
-        resetModal();
-        fetchUsers();
-        fetchStats();
+        resetModal(); fetchUsers(); fetchStats();
       }
     } catch (err) {
       const msg = err.response?.data?.message || 'Erreur serveur.';
       showMsg(msg.includes('déjà') ? '⚠️ Cet email est déjà utilisé.' : msg, 'error');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  // ── CREATE USER FROM ODOO ────────────────────────────────────
+  const handleCreateFromOdoo = async () => {
+    if (!selectedContact) return;
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/api/sync/create-from-odoo`, {
+        odoo_id:   selectedContact.odoo_id,
+        nom:       selectedContact.nom,
+        prenom:    selectedContact.prenom,
+        email:     selectedContact.email,
+        telephone: selectedContact.telephone,
+        role_id:   odooRoleId,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        showMsg(`✅ Compte créé pour ${selectedContact.prenom} ${selectedContact.nom}`, 'success');
+        resetModal(); fetchUsers(); fetchStats();
+      }
+    } catch (err) {
+      showMsg(err.response?.data?.message || 'Erreur serveur.', 'error');
+    } finally { setLoading(false); }
   };
 
   const handleStatut = async (id, statut) => {
@@ -385,16 +448,18 @@ const AdminDashboard = () => {
     { id: 'dashboard', label: 'Tableau de bord', icon: <LayoutDashboard size={15} /> },
     { id: 'users',     label: 'Utilisateurs',    icon: <Users size={15} />            },
     { id: 'projets',   label: 'Projets',          icon: <FolderKanban size={15} />    },
-    { id: 'commandes', label: 'Commandes',         icon: <ShoppingCart size={15} />   },
-    { id: 'factures',  label: 'Factures',          icon: <FileText size={15} />       },
-    { id: 'profil',    label: 'Mon Profil',        icon: <UserCircle size={15} />     },
-    { id: 'logs',      label: 'Logs Connexion',    icon: <ScrollText size={15} />     },
+    { id: 'commandes', label: 'Commandes',        icon: <ShoppingCart size={15} />    },
+    { id: 'factures',  label: 'Factures',         icon: <FileText size={15} />        },
+    { id: 'odooSync',  label: 'Sync Odoo',        icon: <RefreshCw size={15} />       },
+    { id: 'profil',    label: 'Mon Profil',       icon: <UserCircle size={15} />      },
+    { id: 'logs',      label: 'Logs Connexion',   icon: <ScrollText size={15} />      },
   ];
 
   const pageTitle = {
     dashboard: 'Tableau de bord', users: 'Gestion Utilisateurs',
     projets: 'Tous les projets', commandes: 'Toutes les commandes',
-    factures: 'Toutes les factures', profil: 'Mon Profil', logs: 'Logs Connexion',
+    factures: 'Toutes les factures', odooSync: 'Synchronisation Odoo ERP',
+    profil: 'Mon Profil', logs: 'Logs Connexion',
   };
 
   const statCards = stats ? [
@@ -406,7 +471,6 @@ const AdminDashboard = () => {
 
   const inputStyle = { padding: '11px 13px', borderRadius: 10, border: '1px solid #e2e8f0', outline: 'none', fontSize: 13, width: '100%', fontFamily: "'Segoe UI', system-ui, sans-serif", color: '#0f172a', boxSizing: 'border-box' };
 
-  // ── Strength calc ────────────────────────────────────────────
   const getPwStrength = (v) => {
     let sc = 0;
     if (v.length >= 6) sc++;
@@ -414,6 +478,12 @@ const AdminDashboard = () => {
     if (/[A-Z]/.test(v) && /[0-9]/.test(v)) sc++;
     if (/[@#!$%]/.test(v)) sc++;
     return sc;
+  };
+
+  const emailBorderColor = () => {
+    if (!form.email) return '#e2e8f0';
+    if (emailError) return '#ef4444';
+    return '#16a34a';
   };
 
   return (
@@ -452,7 +522,7 @@ const AdminDashboard = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <NotificationBell />
             {activePage === 'users' && (
-              <button onClick={() => setShowModal(true)} style={{ background: T.blue, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 16px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button onClick={openModal} style={{ background: T.blue, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 16px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Plus size={14} /> Créer utilisateur
               </button>
             )}
@@ -550,6 +620,7 @@ const AdminDashboard = () => {
           {activePage === 'projets'   && <AdminProjetsPage />}
           {activePage === 'commandes' && <AdminCommandesPage />}
           {activePage === 'factures'  && <AdminFacturesPage />}
+          {activePage === 'odooSync'  && <OdooSyncPage />}
           {activePage === 'profil'    && <ProfileSection accentColor={T.blue} />}
           {activePage === 'logs'      && <LogsPage />}
         </div>
@@ -558,112 +629,179 @@ const AdminDashboard = () => {
       {/* ━━━━ Modal créer utilisateur ━━━━ */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(3px)' }}>
-          <div style={{ background: T.surface, borderRadius: 20, padding: '28px 30px', width: 440, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+          <div style={{ background: T.surface, borderRadius: 20, padding: '28px 30px', width: modalMode === 'odoo' ? 560 : 440, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
 
+            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ margin: 0, color: T.txt, fontSize: 16 }}>Nouvel utilisateur</h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12, color: T.txtMute }}>Un email de bienvenue sera envoyé automatiquement</p>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: T.txtMute }}>
+                  {modalMode === 'odoo' ? 'Sélectionner depuis Odoo ERP' : 'Un email de bienvenue sera envoyé automatiquement'}
+                </p>
               </div>
               <button onClick={resetModal} style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: 8, fontSize: 16, cursor: 'pointer', color: T.txtMid, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
             </div>
 
-            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {[{ ph: 'Prénom', key: 'prenom' }, { ph: 'Nom', key: 'nom' }].map(({ ph, key }) => (
-                  <input key={key} style={inputStyle} placeholder={ph} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} required />
-                ))}
-              </div>
+            {/* Mode Toggle */}
+            <div style={{ display: 'flex', border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
+              {[
+                { key: 'manual', label: '✏️ Saisie manuelle' },
+                { key: 'odoo',   label: '🔄 Depuis Odoo' },
+              ].map(opt => (
+                <button key={opt.key} type="button" onClick={() => opt.key === 'odoo' ? switchToOdoo() : setModalMode('manual')}
+                  style={{ flex: 1, padding: '10px', border: 'none', fontSize: 12.5, fontWeight: modalMode === opt.key ? 700 : 400, cursor: 'pointer', background: modalMode === opt.key ? P.tealBg : T.surface, color: modalMode === opt.key ? P.teal : T.txtMid, borderRight: opt.key === 'manual' ? `1px solid ${T.border}` : 'none', transition: 'all 0.15s' }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
 
-              <input style={inputStyle} type="email" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-
-              {/* ━━ Password section ━━ */}
-              <div>
-                <p style={{ fontSize: 12, fontWeight: 600, color: T.txtMid, margin: '0 0 8px' }}>Mot de passe</p>
-
-                {/* Toggle auto / manual */}
-                <div style={{ display: 'flex', border: `0.5px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
-                  {[
-                    { key: 'auto',   label: '✦ Générer automatiquement' },
-                    { key: 'manual', label: '✎ Choisir moi-même'        },
-                  ].map(opt => (
-                    <button key={opt.key} type="button" onClick={() => setPwMode(opt.key)}
-                      style={{ flex: 1, padding: '9px 10px', border: 'none', fontSize: 12, fontWeight: pwMode === opt.key ? 600 : 400, cursor: 'pointer', background: pwMode === opt.key ? '#eef2ff' : T.surface, color: pwMode === opt.key ? T.blue : T.txtMid, borderRight: opt.key === 'auto' ? `0.5px solid ${T.border}` : 'none', transition: 'all 0.15s' }}>
-                      {opt.label}
-                    </button>
+            {/* ── MODE MANUEL ── */}
+            {modalMode === 'manual' && (
+              <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[{ ph: 'Prénom', key: 'prenom' }, { ph: 'Nom', key: 'nom' }].map(({ ph, key }) => (
+                    <input key={key} style={inputStyle} placeholder={ph} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} required />
                   ))}
                 </div>
-
-                {/* Mode auto */}
-                {pwMode === 'auto' && (
-                  <div>
-                    <div style={{ background: '#f8fafc', border: `0.5px solid ${T.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 600, color: T.txt, letterSpacing: 1 }}>{generatedPw}</span>
-                      <button type="button" onClick={() => setGeneratedPw(genPassword())}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.txtMute, padding: 0, display: 'flex', alignItems: 'center' }}>
-                        <RefreshCw size={14} />
+                <div>
+                  <input style={{ ...inputStyle, borderColor: emailBorderColor(), borderWidth: form.email ? '1.5px' : '1px', transition: 'border-color 0.2s' }}
+                    type="email" placeholder="Email" value={form.email} onChange={e => handleEmailChange(e.target.value)} required />
+                  {emailError && <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}><span style={{ color: '#ef4444', fontSize: 11, fontWeight: 500 }}>✕ {emailError}</span></div>}
+                  {form.email && !emailError && <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}><CheckCircle2 size={12} color="#16a34a" /><span style={{ color: '#16a34a', fontSize: 11, fontWeight: 500 }}>Format valide</span></div>}
+                </div>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: T.txtMid, margin: '0 0 8px' }}>Mot de passe</p>
+                  <div style={{ display: 'flex', border: `0.5px solid ${T.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+                    {[{ key: 'auto', label: '✦ Générer automatiquement' }, { key: 'manual', label: '✎ Choisir moi-même' }].map(opt => (
+                      <button key={opt.key} type="button" onClick={() => setPwMode(opt.key)}
+                        style={{ flex: 1, padding: '9px 10px', border: 'none', fontSize: 12, fontWeight: pwMode === opt.key ? 600 : 400, cursor: 'pointer', background: pwMode === opt.key ? '#eef2ff' : T.surface, color: pwMode === opt.key ? T.blue : T.txtMid, borderRight: opt.key === 'auto' ? `0.5px solid ${T.border}` : 'none', transition: 'all 0.15s' }}>
+                        {opt.label}
                       </button>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <CheckCircle2 size={13} color="#16a34a" />
-                      <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>Fort — sera envoyé par email à l'utilisateur</span>
-                    </div>
+                    ))}
                   </div>
-                )}
-
-                {/* Mode manual */}
-                {pwMode === 'manual' && (
-                  <div>
-                    <div style={{ position: 'relative', marginBottom: 6 }}>
-                      <input
-                        style={{ ...inputStyle, paddingRight: 38 }}
-                        type={showManualPw ? 'text' : 'password'}
-                        placeholder="Saisir un mot de passe (min. 8 car.)"
-                        value={manualPw}
-                        onChange={e => setManualPw(e.target.value)}
-                        required
-                      />
-                      <button type="button" onClick={() => setShowManualPw(!showManualPw)}
-                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.txtMute, padding: 0, display: 'flex' }}>
-                        {showManualPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
+                  {pwMode === 'auto' && (
+                    <div>
+                      <div style={{ background: '#f8fafc', border: `0.5px solid ${T.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 600, color: T.txt, letterSpacing: 1 }}>{generatedPw}</span>
+                        <button type="button" onClick={() => setGeneratedPw(genPassword())} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.txtMute, padding: 0, display: 'flex', alignItems: 'center' }}><RefreshCw size={14} /></button>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={13} color="#16a34a" /><span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>Fort — sera envoyé par email à l'utilisateur</span></div>
                     </div>
-                    {manualPw.length > 0 && (() => {
-                      const sc = getPwStrength(manualPw);
-                      const colors = ['#ef4444', '#f97316', '#eab308', '#16a34a'];
-                      const labels = ['Très faible', 'Faible', 'Moyen', 'Fort ✓'];
-                      return (
-                        <div>
-                          <div style={{ display: 'flex', gap: 4, marginBottom: 3 }}>
-                            {[0,1,2,3].map(i => (
-                              <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i < sc ? colors[sc-1] : '#e2e8f0', transition: 'background 0.2s' }} />
-                            ))}
+                  )}
+                  {pwMode === 'manual' && (
+                    <div>
+                      <div style={{ position: 'relative', marginBottom: 6 }}>
+                        <input style={{ ...inputStyle, paddingRight: 38 }} type={showManualPw ? 'text' : 'password'} placeholder="Saisir un mot de passe (min. 8 car.)" value={manualPw} onChange={e => setManualPw(e.target.value)} required />
+                        <button type="button" onClick={() => setShowManualPw(!showManualPw)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.txtMute, padding: 0, display: 'flex' }}>
+                          {showManualPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                      {manualPw.length > 0 && (() => {
+                        const sc = getPwStrength(manualPw);
+                        const colors = ['#ef4444', '#f97316', '#eab308', '#16a34a'];
+                        const labels = ['Très faible', 'Faible', 'Moyen', 'Fort ✓'];
+                        return (
+                          <div>
+                            <div style={{ display: 'flex', gap: 4, marginBottom: 3 }}>{[0,1,2,3].map(i => <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i < sc ? colors[sc-1] : '#e2e8f0', transition: 'background 0.2s' }} />)}</div>
+                            <span style={{ fontSize: 11, color: colors[Math.max(0, sc-1)] }}>{labels[Math.max(0, sc-1)]}</span>
                           </div>
-                          <span style={{ fontSize: 11, color: colors[Math.max(0, sc-1)] }}>{labels[Math.max(0, sc-1)]}</span>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <select style={{ ...inputStyle, background: T.surface }} value={form.role_id} onChange={e => setForm({ ...form, role_id: parseInt(e.target.value) })}>
+                  <option value="2">Client</option>
+                  <option value="3">Fournisseur</option>
+                  <option value="4">Partenaire</option>
+                </select>
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <button type="button" onClick={resetModal} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `0.5px solid ${T.border}`, background: '#f8fafc', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: T.txtMid }}>Annuler</button>
+                  <button type="submit" disabled={loading || (pwMode === 'manual' && manualPw.length < 8) || !!emailError || !form.email}
+                    style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: (loading || (pwMode === 'manual' && manualPw.length < 8) || !!emailError || !form.email) ? '#93c5fd' : `linear-gradient(135deg, ${T.blue}, ${T.indigo})`, color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    {loading ? 'Création...' : <><Mail size={13} /> Créer &amp; Envoyer mail</>}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ── MODE ODOO ── */}
+            {modalMode === 'odoo' && (
+              <div>
+                {odooLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: T.txtMute }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+                    <div style={{ fontSize: 13 }}>Chargement contacts Odoo...</div>
                   </div>
+                ) : odooContacts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: T.txtMute }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>📭</div>
+                    <div style={{ fontSize: 13 }}>Aucun contact Odoo disponible</div>
+                    <div style={{ fontSize: 11, marginTop: 4 }}>Tous les contacts ont déjà un compte</div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 12, color: T.txtMute, marginBottom: 10 }}>
+                      {odooContacts.length} contact(s) disponible(s) — sélectionne un pour créer son compte
+                    </div>
+
+                    {/* Lista contacts */}
+                    <div style={{ maxHeight: 280, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: 10, marginBottom: 16 }}>
+                      {odooContacts.map((c, i) => (
+                        <div key={c.odoo_id} onClick={() => { setSelectedContact(c); setOdooRoleId(ROLE_ID_MAP[c.role_suggere] || 2); }}
+                          style={{ padding: '12px 16px', borderBottom: i < odooContacts.length - 1 ? `1px solid ${T.borderXs}` : 'none', cursor: 'pointer', background: selectedContact?.odoo_id === c.odoo_id ? P.tealBg : T.surface, display: 'flex', alignItems: 'center', gap: 12, transition: 'background 0.15s' }}>
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: selectedContact?.odoo_id === c.odoo_id ? P.teal : T.indigo, color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {(c.prenom?.[0] || '') + (c.nom?.[0] || '')}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: T.txt }}>{c.prenom} {c.nom}</div>
+                            <div style={{ fontSize: 11, color: T.txtMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
+                            {c.company && <div style={{ fontSize: 10, color: T.txtMid }}>{c.company}</div>}
+                          </div>
+                          <div>
+                            <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: P.indigoBg, color: P.indigo }}>
+                              {c.role_suggere}
+                            </span>
+                          </div>
+                          {selectedContact?.odoo_id === c.odoo_id && (
+                            <CheckCircle2 size={16} color={P.teal} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Contact sélectionné — détails */}
+                    {selectedContact && (
+                      <div style={{ background: P.tealBg, border: `1px solid ${P.tealBd}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: P.teal, marginBottom: 10 }}>✅ Contact sélectionné</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12, color: T.txt }}>
+                          <div><span style={{ color: T.txtMute }}>Nom:</span> {selectedContact.prenom} {selectedContact.nom}</div>
+                          <div><span style={{ color: T.txtMute }}>Email:</span> {selectedContact.email}</div>
+                          {selectedContact.telephone && <div><span style={{ color: T.txtMute }}>Tél:</span> {selectedContact.telephone}</div>}
+                        </div>
+                        <div style={{ marginTop: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: T.txtMid, display: 'block', marginBottom: 6 }}>Rôle dans la plateforme:</label>
+                          <select value={odooRoleId} onChange={e => setOdooRoleId(parseInt(e.target.value))}
+                            style={{ ...inputStyle, padding: '8px 12px' }}>
+                            <option value="2">Client</option>
+                            <option value="3">Fournisseur</option>
+                            <option value="4">Partenaire</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={resetModal} style={{ flex: 1, padding: '11px', borderRadius: 10, border: `0.5px solid ${T.border}`, background: '#f8fafc', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: T.txtMid }}>Annuler</button>
+                      <button onClick={handleCreateFromOdoo} disabled={!selectedContact || loading}
+                        style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: !selectedContact || loading ? '#94a3b8' : `linear-gradient(135deg, ${P.teal}, ${P.green})`, color: '#fff', cursor: !selectedContact || loading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        {loading ? 'Création...' : <><Mail size={13} /> Créer compte &amp; Envoyer mail</>}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
-
-              <select style={{ ...inputStyle, background: T.surface }} value={form.role_id} onChange={e => setForm({ ...form, role_id: parseInt(e.target.value) })}>
-                <option value="2">Client</option>
-                <option value="3">Fournisseur</option>
-                <option value="4">Partenaire</option>
-              </select>
-
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button type="button" onClick={resetModal}
-                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: `0.5px solid ${T.border}`, background: '#f8fafc', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: T.txtMid }}>
-                  Annuler
-                </button>
-                <button type="submit" disabled={loading || (pwMode === 'manual' && manualPw.length < 8)}
-                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: (loading || (pwMode === 'manual' && manualPw.length < 8)) ? '#93c5fd' : `linear-gradient(135deg, ${T.blue}, ${T.indigo})`, color: '#fff', cursor: (loading || (pwMode === 'manual' && manualPw.length < 8)) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  {loading ? 'Création...' : <><Mail size={13} /> Créer &amp; Envoyer mail</>}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}

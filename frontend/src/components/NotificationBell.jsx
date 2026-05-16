@@ -3,16 +3,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 
 export default function NotificationBell() {
-  const [open, setOpen]                 = useState(false);
+  const [open, setOpen]                   = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount]   = useState(0);
+  const [unreadCount, setUnreadCount]     = useState(0);
 
   // Modal traitement
-  const [modalOpen, setModalOpen]       = useState(false);
+  const [modalOpen, setModalOpen]         = useState(false);
   const [selectedNotif, setSelectedNotif] = useState(null);
-  const [newPassword, setNewPassword]   = useState('');
-  const [modalStep, setModalStep]       = useState('form'); // 'form' | 'loading' | 'success' | 'error'
-  const [modalError, setModalError]     = useState('');
+  const [newPassword, setNewPassword]     = useState('');
+  const [modalStep, setModalStep]         = useState('form'); // 'form' | 'loading' | 'success' | 'error'
+  const [modalError, setModalError]       = useState('');
 
   const dropdownRef = useRef(null);
 
@@ -49,6 +49,16 @@ export default function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // ── Toggle dropdown + reset badge ────────────────────────
+  const handleToggle = () => {
+    const newOpen = !open;
+    setOpen(newOpen);
+    // Ki teftah bass — reset el badge lel 0
+    if (newOpen && unreadCount > 0) {
+      setUnreadCount(0);
+    }
+  };
 
   // ── Ouvrir modal traitement ───────────────────────────────
   const handleTraiter = (notif) => {
@@ -98,8 +108,8 @@ export default function NotificationBell() {
   // ── Format date ───────────────────────────────────────────
   const formatDate = (dateStr) => {
     const diff = Math.floor((new Date() - new Date(dateStr)) / 60000);
-    if (diff < 1)  return "À l'instant";
-    if (diff < 60) return `Il y a ${diff} min`;
+    if (diff < 1)    return "À l'instant";
+    if (diff < 60)   return `Il y a ${diff} min`;
     if (diff < 1440) return `Il y a ${Math.floor(diff / 60)}h`;
     return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
   };
@@ -111,7 +121,7 @@ export default function NotificationBell() {
       {/* ── Cloche ─────────────────────────────────────────── */}
       <div style={{ position: 'relative' }} ref={dropdownRef}>
         <button
-          onClick={() => setOpen(!open)}
+          onClick={handleToggle}
           style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}
         >
           <span style={{ fontSize: '20px' }}>🔔</span>
@@ -141,9 +151,9 @@ export default function NotificationBell() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
               <span style={{ fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>Notifications</span>
-              {unreadCount > 0 && (
+              {pendingNotifs.length > 0 && (
                 <span style={{ background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>
-                  {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
+                  {pendingNotifs.length} en attente
                 </span>
               )}
             </div>

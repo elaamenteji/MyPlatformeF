@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import OdooSyncPage from './pages/OdooSyncPage';
+
 
 // Importation dynamique (Lazy Loading) pour toutes les pages
 const AdminDashboard       = lazy(() => import('./pages/AdminDashboard'));
@@ -87,6 +89,11 @@ const App = () => {
                 <ChangePassword />
               </ProtectedRoute>
             } />
+            <Route path="/odoo-sync" element={
+             <ProtectedRoute allowedRoles={['admin']}>
+               <OdooSyncPage />
+              </ProtectedRoute>
+} />
 
           </Routes>
         </Suspense>

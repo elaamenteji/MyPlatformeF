@@ -44,12 +44,12 @@ const sendResetLinkEmail = async (toEmail, resetLink, prenom) => {
 // ── Welcome email (nouvel utilisateur) ────────────────────────
 const sendWelcomeEmail = async (toEmail, prenom, mdps) => {
   await transporter.sendMail({
-    from: `MyPlatforme <${process.env.SMTP_USER}>`,
+    from: `Mitech TN <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: '🎉 Bienvenue sur MyPlatforme — Vos identifiants',
+    subject: '🎉 Bienvenue sur Mitech TN — Vos identifiants',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e2e8f0;border-radius:12px">
-        <h2 style="color:#3b5bdb">MyPlatforme — Mitech Tunisie</h2>
+        <h2 style="color:#3b5bdb">Mitech TN — Mitech Tunisie</h2>
         <p>Bonjour <strong>${prenom}</strong>,</p>
         <p>Votre compte a été créé avec succès !</p>
         <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0">
